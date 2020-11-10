@@ -31,22 +31,42 @@ const render = () => {
   $activeTodos.textContent = todos.filter(todo => !todo.completed).length;
 };
 
-const fetchTodos = () => {
-  // todos = [
-  //   { id: 1, content: 'HTML', completed: false },
-  //   { id: 2, content: 'CSS', completed: true },
-  //   { id: 3, content: 'Javascript', completed: false }
-  // ].sort((todo1, todo2) => todo2.id - todo1.id);
-
-  // render(todos);
-  fetch('/todos')
+const fetchTodos = promise => {
+  promise
     .then(res => res.json())
     .then(_todos => { todos = _todos; })
     .then(render)
     .catch(console.error);
 };
 
-window.onload = fetchTodos;
+const require = {
+  get(url) {
+    return fetchTodos(fetch(url));
+  },
+  post(url, payload) {
+    return fetchTodos(fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }));
+  },
+  patch(url, payload) {
+    return fetchTodos(fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }));
+  },
+  delete(url) {
+    return fetchTodos(fetch(url, {
+      method: 'DELETE'
+    }));
+  }
+};
+
+window.onload = () => {
+  require.get('/todos');
+};
 
 $inputTodo.onkeyup = e => {
   if (e.key !== 'Enter') return;
@@ -54,16 +74,9 @@ $inputTodo.onkeyup = e => {
   const content = $inputTodo.value;
   const newTodo = { id: generateNextId(), content, completed: false };
 
-  fetch('/todos', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(newTodo)
-  })
-    .then(res => res.json())
-    .then(_todos => { todos = _todos; })
-    .then(render)
-    .then($inputTodo.value = '')
-    .catch(console.error);
+  require.post('/todos', newTodo);
+
+  $inputTodo.value = '';
 };
 
 $todos.onclick = e => {
@@ -71,53 +84,24 @@ $todos.onclick = e => {
 
   const removeId = e.target.parentNode.id;
 
-  fetch(`/todos/${removeId}`, {
-    method: 'DELETE'
-  })
-    .then(res => res.json())
-    .then(_todos => { todos = _todos; })
-    .then(render)
-    .catch(console.error);
+  require.delete(`/todos/${removeId}`);
 };
 
 $todos.onchange = e => {
   const toggleCompleted = e.target.checked;
   const toggleId = e.target.parentNode.id;
 
-  fetch(`/todos/${toggleId}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ completed: toggleCompleted })
-  })
-    .then(res => res.json())
-    .then(_todos => { todos = _todos; })
-    .then(render)
-    .catch(console.error);
+  require.patch(`/todos/${toggleId}`, { completed: toggleCompleted });
 };
 
 $footer.onchange = e => {
   const toggleAll = e.target.checked;
 
-  fetch('/todos/completed', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ completed: toggleAll })
-  })
-    .then(res => res.json())
-    .then(_todos => { todos = _todos; })
-    .then(render)
-    .catch(console.error);
+  require.patch('/todos/completed', { completed: toggleAll });
 };
 
-$btn.onclick = e => {
-  fetch('/todos/completed', {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' }
-  })
-    .then(res => res.json())
-    .then(_todos => { todos = _todos; })
-    .then(render)
-    .catch(console.error);
+$btn.onclick = () => {
+  require.delete('/todos/completed');
 };
 
 $nav.onclick = ({ target }) => {
