@@ -57,9 +57,7 @@ app.patch('/todos/:id', (req, res) => {
     });
   }
 
-  todos = todos.map(todo =>
-    todo.id === id ? { ...todo, ...completed } : todo
-  );
+  todos = todos.map(todo => (todo.id === id ? { ...todo, ...completed } : todo));
   res.send(todos);
 });
 
